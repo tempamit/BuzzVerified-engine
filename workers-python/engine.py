@@ -12,7 +12,16 @@ if not gemini_key:
     raise ValueError("CRITICAL: GEMINI_API_KEY is missing from the server environment!")
 
 genai.configure(api_key=gemini_key)
-model = genai.GenerativeModel('gemini-2.0-flash')
+model = genai.GenerativeModel(
+    'gemini-2.5-flash',
+    'gemini-2.5-flash-lite',
+    'gemini-2.0-flash',
+    'gemini-2.0-flash-lite',
+    'gemini-1.5-flash-latest',
+    'gemini-3-flash-preview',
+    'gemini-3.1-flash-lite-preview',
+    'gemini-3.1-pro-preview'
+    )
 
 def get_hackernews_trends():
     """Fetches the #1 trending tech story from Hacker News (Zero API Keys required)."""
