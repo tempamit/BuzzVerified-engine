@@ -5,10 +5,14 @@ from groq import Groq
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtubesearchpython import VideosSearch
 
-# 1. SETUP CREDENTIALS (Securely fetching from Coolify)
+# 1. SETUP CREDENTIALS
 groq_key = os.environ.get("GROQ_API_KEY")
-if not groq_key:
-    raise ValueError("CRITICAL: GROQ_API_KEY is missing from the server environment!")
+wp_user = os.environ.get("WP_USERNAME")
+wp_pass = os.environ.get("WP_APP_PASSWORD")
+
+if not groq_key or not wp_user or not wp_pass:
+    raise ValueError("CRITICAL: Missing API keys or WordPress credentials in Coolify!")
+
 
 # Initialize the Groq Client
 client = Groq(api_key=groq_key)
@@ -104,6 +108,35 @@ def generate_sucheta_article(trend_data, yt_context):
     except Exception as e:
         return f"Groq API Error: {e}"
 
+def post_to_wordpress(title, content):
+    """Pushes the final article directly to BuzzVerified.com"""
+    print(f"Attempting to post to BuzzVerified: {title}")
+    
+    url = "https://buzzverified.com/wp-json/wp/v2/posts"
+    
+    # We format the payload for WordPress
+    data = {
+        "title": f"The Consensus: {title}",
+        "content": content,
+        "status": "publish" # Change to "draft" if you want to review them manually first!
+    }
+    
+    try:
+        response = requests.post(
+            url,
+            auth=(wp_user, wp_pass),
+            json=data,
+            timeout=15
+        )
+        
+        if response.status_code == 201:
+            print(f"SUCCESS! Article published to BuzzVerified.")
+        else:
+            print(f"WordPress Error: {response.status_code} - {response.text}")
+            
+    except Exception as e:
+        print(f"Critical WordPress Connection Error: {e}")
+
 # 5. THE CONTINUOUS WORKER LOOP
 def run_buzz_engine():
     print("--- BuzzVerified Engine Waking Up ---")
@@ -116,8 +149,10 @@ def run_buzz_engine():
         print("Generating Sucheta's Report via Groq...")
         article = generate_sucheta_article(trend, context)
         
-        print("\n--- FINAL ARTICLE ---\n")
-        print(article)
+        print("\n--- FINAL ARTICLE GENERATED ---\n")
+        
+        # ACTUALLY POST IT TO THE WEBSITE!
+        post_to_wordpress(trend['title'], article)
         
     else:
         print("No suitable trends found right now.")
