@@ -1,21 +1,17 @@
-import requests
+import os
 import time
+import requests
+import google.generativeai as genai
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtubesearchpython import VideosSearch
-import os
-import google.generativeai as genai
 
-# Read from Coolify Environment Variables
-api_key = os.getenv("GEMINI_API_KEY")
+# 1. SETUP CREDENTIALS (Securely fetching from Coolify)
+gemini_key = os.environ.get("GEMINI_API_KEY")
 
-if not api_key:
-    raise ValueError("GEMINI_API_KEY not found in Environment Variables!")
+if not gemini_key:
+    raise ValueError("CRITICAL: GEMINI_API_KEY is missing from the server environment!")
 
-genai.configure(api_key=api_key)
-
-# 1. SETUP CREDENTIALS
-# We bypass Reddit credentials using the JSON method for now
-genai.configure(api_key="YOUR_GEMINI_API_KEY")
+genai.configure(api_key=gemini_key)
 model = genai.GenerativeModel('gemini-2.0-flash')
 
 def get_hackernews_trends():
