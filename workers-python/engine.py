@@ -18,51 +18,46 @@ genai.configure(api_key=api_key)
 genai.configure(api_key="YOUR_GEMINI_API_KEY")
 model = genai.GenerativeModel('gemini-2.0-flash')
 
-def get_reddit_trends_json(subreddit="HomeAutomation"):
-    """Fetches trending posts and comments without an API Key."""
-    
-    # We must look like a standard Windows Chrome browser to bypass the VPS block
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'application/json',
-        'Accept-Language': 'en-US,en;q=0.9'
-    }
-    
-    url = f"https://www.reddit.com/r/{subreddit}/hot.json?limit=5"
+def get_hackernews_trends():
+    """Fetches the #1 trending tech story from Hacker News (Zero API Keys required)."""
+    print("Connecting to open Hacker News API...")
     
     try:
-        response = requests.get(url, headers=headers, timeout=10)
+        # 1. Get the list of current top story IDs
+        top_stories_url = "https://hacker-news.firebaseio.com/v0/topstories.json"
+        story_ids = requests.get(top_stories_url, timeout=10).json()
+
+        # 2. Fetch the details of the #1 story
+        top_story_id = story_ids[0]
+        story_url = f"https://hacker-news.firebaseio.com/v0/item/{top_story_id}.json"
+        story = requests.get(story_url, timeout=10).json()
+
+        title = story.get('title', 'Unknown Title')
+        print(f"Found Top Story: {title}")
         
-        # Check exactly what Reddit sent back
-        if response.status_code != 200:
-            print(f"Reddit blocked us! Status: {response.status_code}")
-            # Print the first 100 characters of the block page to be sure
-            print(f"Response: {response.text[:100]}")
-            return None
+        # 3. Fetch the top 5 comments for context
+        comment_ids = story.get('kids', [])[:5]
+        comments = []
+        
+        for cid in comment_ids:
+            time.sleep(1) # Be polite to the API
+            c_url = f"https://hacker-news.firebaseio.com/v0/item/{cid}.json"
+            c_data = requests.get(c_url, timeout=10).json()
             
-        data = response.json()
-        posts = data['data']['children']
+            if c_data and 'text' in c_data:
+                # Clean up basic HTML from HN comments
+                clean_text = c_data['text'].replace('<p>', ' ').replace('&#x27;', "'").replace('&quot;', '"')
+                if len(clean_text) > 50:
+                    comments.append(clean_text)
+
+        return {
+            "title": title,
+            "comments": comments
+        }
         
-        for post in posts:
-            p = post['data']
-            if p.get('num_comments', 0) > 15 and not p.get('is_self') == False: 
-                comment_url = f"https://www.reddit.com{p['permalink']}.json"
-                
-                # Sleep for 2 seconds before hitting the comments to act 'human'
-                time.sleep(2) 
-                
-                c_response = requests.get(comment_url, headers=headers, timeout=10)
-                if c_response.status_code == 200:
-                    c_data = c_response.json()
-                    comments = [c['data'].get('body', '') for c in c_data[1]['data']['children'][:10]]
-                    
-                    return {
-                        "title": p['title'],
-                        "comments": [c for c in comments if len(c) > 50]
-                    }
     except Exception as e:
-        print(f"Reddit Error: {e}")
-    return None
+        print(f"Hacker News API Error: {e}")
+        return None
 ####
 
 
@@ -109,8 +104,8 @@ def generate_sucheta_article(trend_data, yt_context):
 def run_buzz_engine():
     print("--- BuzzVerified Engine Waking Up ---")
     
-    # We pass 'HomeAutomation' or 'Technology' here
-    trend = get_reddit_trends_json("Technology")
+    # Use the open Hacker News API instead!
+    trend = get_hackernews_trends()
 
     if trend:
         print(f"Trending Topic Found: {trend['title']}")
