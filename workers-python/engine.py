@@ -6,22 +6,18 @@ from youtube_transcript_api import YouTubeTranscriptApi
 from youtubesearchpython import VideosSearch
 
 # 1. SETUP CREDENTIALS (Securely fetching from Coolify)
-gemini_key = os.environ.get("GEMINI_API_KEY")
+genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 
-if not gemini_key:
-    raise ValueError("CRITICAL: GEMINI_API_KEY is missing from the server environment!")
+# Initialize your suite of models
+gemini_models = {
+    "flash_latest": genai.GenerativeModel('gemini-2.5-flash'),
+    "flash_stable": genai.GenerativeModel('gemini-2.0-flash'),
+    "pro_preview": genai.GenerativeModel('gemini-3.1-pro-preview'),
+    "lite": genai.GenerativeModel('gemini-3.1-flash-lite-preview')
+}
 
-genai.configure(api_key=gemini_key)
-model = genai.GenerativeModel(
-    'gemini-2.5-flash',
-    'gemini-2.5-flash-lite',
-    'gemini-2.0-flash',
-    'gemini-2.0-flash-lite',
-    'gemini-1.5-flash-latest',
-    'gemini-3-flash-preview',
-    'gemini-3.1-flash-lite-preview',
-    'gemini-3.1-pro-preview'
-    )
+# Call the specific model you need for the task
+response = gemini_models["flash_stable"].generate_content("Analyze this Hacker News trend.")
 
 def get_hackernews_trends():
     """Fetches the #1 trending tech story from Hacker News (Zero API Keys required)."""
